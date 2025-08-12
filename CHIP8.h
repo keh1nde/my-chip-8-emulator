@@ -21,6 +21,7 @@ struct CHIP8Context {
     BYTE m_ScreenData[64][32];
 
     void CPUReset();
+    WORD GetNextOpcode();
 };
 
 

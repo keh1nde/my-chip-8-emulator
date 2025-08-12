@@ -15,3 +15,12 @@ void CHIP8Context::CPUReset() {
     fclose(in);
 }
 
+CHIP8Context::WORD CHIP8Context::GetNextOpcode()
+{
+    WORD res = 0 ;
+    res = m_GameMemory[m_ProgramCounter] ; // in example res is 0xAB
+    res <<= 8 ; // shift 8 bits left. In our example res is 0xAB00
+    res |= m_GameMemory[m_ProgramCounter+1] ; // In example res is 0xABCD
+    m_ProgramCounter+=2 ;
+    return res ;
+}
