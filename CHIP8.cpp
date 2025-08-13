@@ -140,8 +140,8 @@ void CHIP8Context::OPCode4XNN(const WORD& opcode) {
 }
 
 /**
-* CHIP8 instruction 5XY0
-* @param opcode OPCode containing both X and Y
+* CHIP8 instruction 5XY0.
+* @param opcode OPCode containing both X and Y.
 * @post Check if X and Y are the same, and skips the next instruction if so.
 */
 void CHIP8Context::OPCode5XY0(const WORD &opcode) {
