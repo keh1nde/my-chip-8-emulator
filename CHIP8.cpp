@@ -24,3 +24,120 @@ CHIP8Context::WORD CHIP8Context::GetNextOpcode()
     m_ProgramCounter+=2 ;
     return res ;
 }
+
+void CHIP8Context::execute() {
+    const WORD opcode = GetNextOpcode();
+
+    switch (opcode & 0xF000) { // The first character
+        case 0x1000:
+            OPCode1NNN(opcode);
+            break;
+
+        case 0x0000: // Requires further analysis
+            switch (opcode & 0x0FFF) {
+                case 0x00E0:
+                    OPCode00E0();
+                    break;
+            case 0x00EE:
+                    OPCode00EE();
+                    break;
+            }
+
+        case 0x2000:
+            // Full instruction: 0x2NNN. Call subroutine at NNN.
+
+        case 0x3000:
+            OPCode3XNN(opcode);
+            break;
+
+        case 0x4000:
+            OPCode4XNN(opcode);
+            break;
+
+        case 0x5000:
+            OPCode5XY0(opcode);
+            break;
+        case 0x6000:
+
+
+        default: return; // No implementation.
+    }
+}
+
+/**
+ * CHIP8 instruction 1NNN: Call
+ * Sets the program counter to point to the instruction located at address NNN.
+ * @param opcode
+ */
+void CHIP8Context::OPCode1NNN(const WORD& opcode) {
+    m_ProgramCounter = opcode & 0x0FFF;
+}
+
+/**
+ CHIP8 instruction 00E0: Clears the screen.
+ */
+void CHIP8Context::OPCode00E0() { // Read the chapter on Graphics before implementing.
+    return;
+}
+
+/**
+* CHIP8 instruction 00EE: Returns to a subroutine.
+*/
+void CHIP8Context::OPCode00EE() const {
+    return;
+}
+
+/**
+* CHIP8 instruction 3XNN
+* @param opcode OPCode that contains X and NN.
+* @post Check if X and NN are equal, and skips the next instruction if true.
+*/
+void CHIP8Context::OPCode3XNN(const WORD& opcode) {
+    const WORD Vx = (opcode & 0x0F00);
+    const WORD NN = (opcode & 0x00FF);
+
+    if (Vx == NN) {
+        m_ProgramCounter += 2; // Skip the next instruction.
+    }
+}
+
+/**
+* CHIP8 instruction 4XNN.
+* @param opcode OPCode that contains X and NN.
+* @post Check if X and NN are not equal, and skips the next instruction if true.
+*/
+void CHIP8Context::OPCode4XNN(const WORD& opcode) {
+    const WORD Vx = (opcode & 0x0F00);
+    const WORD NN = (opcode & 0x00FF);
+
+    if (Vx != NN) {
+        m_ProgramCounter += 2; // Skip the next instruction.
+    }
+}
+
+/**
+* CHIP8 instruction 5XY0
+* @param opcode OPCode containing both X and Y
+* @post Check if X and Y are the same, and skips the next instruction if so.
+*/
+void CHIP8Context::OPCode5XY0(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    if (m_Registers[x] == m_Registers[y]) {
+        m_ProgramCounter += 2; // Skip the next instruction.
+    }
+}
+
+/**
+* CHIP8 instruction 6XNN.
+* @param opcode OPCode containing both X and NN.
+* @post Sets X equal to NN.
+*/
+void CHIP8Context::OPCode6XNN(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE NN = (opcode & 0x00FF);
+
+    m_Registers[x] = NN;
+}
+

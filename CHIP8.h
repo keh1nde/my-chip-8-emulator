@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <iostream>
 
 struct CHIP8Context {
     typedef unsigned char WORD;
@@ -21,7 +22,56 @@ struct CHIP8Context {
     BYTE m_ScreenData[64][32];
 
     void CPUReset();
+    void execute();
     WORD GetNextOpcode();
+
+    // OPCodes
+
+    /**
+    * CHIP8 instruction 1NNN: Call
+    * Sets the program counter to point to the instruction located at address NNN.
+    * @param opcode The OPCode that contains the address containing the instruction.
+    * @post Program Counter is set to that instruction.
+    */
+    void OPCode1NNN(const WORD& opcode);
+
+    /**
+    CHIP8 instruction 00E0: Clears the screen.
+    */
+    void OPCode00E0();
+
+    /**
+     * CHIP8 instruction 00EE: Returns to a subroutine.
+     */
+    void OPCode00EE() const;
+
+    /**
+     * CHIP8 instruction 3XNN
+     * @param opcode OPCode that contains X and NN.
+     * @post Check if X and NN are equal, and skips the next instruction if true.
+     */
+    void OPCode3XNN(const WORD& opcode);
+
+    /**
+     * CHIP8 instruction 4XNN.
+     * @param opcode OPCode that contains X and NN.
+     * @post Check if X and NN are not equal, and skips the next instruction if true.
+     */
+    void OPCode4XNN(const WORD& opcode);
+
+    /**
+     * CHIP8 instruction 5XY0
+     * @param opcode OPCode containing both X and Y
+     * @post Check if X and Y are the same, and skips the next instruction if so.
+     */
+    void OPCode5XY0(const WORD& opcode);
+
+    /**
+     * CHIP8 instruction 6XNN.
+     * @param opcode OPCode containing both X and NN.
+     * @post Sets X equal to NN.
+     */
+    void OPCode6XNN(const WORD& opcode);
 };
 
 
