@@ -69,9 +69,44 @@ struct CHIP8Context {
     /**
      * CHIP8 instruction 6XNN.
      * @param opcode OPCode containing both X and NN.
-     * @post Sets X equal to NN.
+     * @post Sets the register X equal to NN.
      */
     void OPCode6XNN(const WORD& opcode);
+
+    /**
+     * CHIP8 instruction 7XNN.
+     * @param opcode OPCode containing both X and NN.
+     * @post Adds NN to the number located in register X.
+     */
+    void OPCode7XNN(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction 8XY0
+     * @param opcode OPCode containing both X and Y
+     * Sets the register X equal to Y.
+     */
+    void OPCode8XY0(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction 8XY1
+     * @param opcode OPCode containing both X and Y
+     * Sets the register X equal to the bitwise OR of X and Y.
+     */
+    void OPCode8XY1(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction 8XY2
+     * @param opcode OPCode containing both X and Y
+     * Sets the register X equal to the bitwise AND of X and Y.
+     */
+    void OPCode8XY2(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction 8XY3
+     * @param opcode OPCode containing both X and Y
+     * Sets the register X equal to the XOR of X and Y.
+     */
+    void OPCode8XY3(const WORD& opcode);
 };
 
 

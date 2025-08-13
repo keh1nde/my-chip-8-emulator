@@ -57,7 +57,31 @@ void CHIP8Context::execute() {
         case 0x5000:
             OPCode5XY0(opcode);
             break;
+
         case 0x6000:
+            OPCode6XNN(opcode);
+            break;
+
+        case 0x7000:
+            OPCode7XNN(opcode);
+            break;
+
+        case 0x8000:
+            switch (opcode & 0x000F) {
+                case 0x0000:
+                    OPCode8XY0(opcode);
+                    break;
+                case 0x0001:
+                    OPCode8XY1(opcode);
+                    break;
+                case 0x0002:
+                    OPCode8XY2(opcode);
+                    break;
+                case 0x0003:
+                    OPCode8XY3(opcode);
+                    break;
+
+            }
 
 
         default: return; // No implementation.
@@ -141,3 +165,62 @@ void CHIP8Context::OPCode6XNN(const WORD &opcode) {
     m_Registers[x] = NN;
 }
 
+/**
+* CHIP8 instruction 7XNN.
+* @param opcode OPCode containing both X and NN.
+* @post Adds NN to X.
+*/
+void CHIP8Context::OPCode7XNN(const WORD& opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE NN = (opcode & 0x00FF);
+
+    m_Registers[x] += NN;
+}
+
+/**
+* CHIP8 Instruction 8XY0.
+* @param opcode OPCode containing both X and Y.
+* Sets the register X equal to Y.
+*/
+void CHIP8Context::OPCode8XY0(const WORD& opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE NN = (opcode & 0x00F0);
+
+    m_Registers[x] = NN;
+}
+
+/**
+* CHIP8 Instruction 8XY0
+* @param opcode OPCode containing both X and Y
+* Sets the register X equal to the bitwise OR of X and Y.
+*/
+void CHIP8Context::OPCode8XY1(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    m_Registers[x] = x|y;
+}
+
+/**
+* CHIP8 Instruction 8XY0
+* @param opcode OPCode containing both X and Y
+* Sets the register X equal to Y.
+*/
+void CHIP8Context::OPCode8XY2(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    m_Registers[x] = x&y;
+}
+
+/**
+* CHIP8 Instruction 8XY3
+* @param opcode OPCode containing both X and Y
+* Sets the register X equal to the XOR of X and Y.
+*/
+void CHIP8Context::OPCode8XY3(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    m_Registers[x] = x^y;
+}
