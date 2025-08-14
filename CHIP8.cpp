@@ -33,19 +33,22 @@ void CHIP8Context::execute() {
             OPCode1NNN(opcode);
             break;
 
-        case 0x0000: // Requires further analysis
+        case 0x0000: // Requires further analysis. This is done for all instructions with common digits.
             switch (opcode & 0x0FFF) {
                 case 0x00E0:
                     OPCode00E0();
                     break;
-            case 0x00EE:
+                case 0x00EE:
                     OPCode00EE();
                     break;
-            default: // Fatal Error. Incorrect instruction.
+                default: // Fatal Error. Incorrect instruction.
+                    break;
             }
+            break;
 
         case 0x2000:
-            // Full instruction: 0x2NNN. Call subroutine at NNN.
+            OPCode2NNN(opcode);
+            break;
 
         case 0x3000:
             OPCode3XNN(opcode);
@@ -96,30 +99,130 @@ void CHIP8Context::execute() {
                 case 0x000E:
                     OPCode8XYE(opcode);
                     break;
+                default: // An error has occurred.
+                    break;
             }
+            break;
         case 0x9000:
             OPCode9XY0(opcode);
              break;
+        case 0xA000:
+            OPCodeANNN(opcode);
+            break;
+        case 0xB000:
+            OPCodeBNNN(opcode);
+            break;
+        case 0xC000:
+            OPCodeCXNN(opcode);
+            break;
+        case 0xD000:
+            OPCodeDXYN(opcode);
+            break;
+        case 0xE000:
+            switch (opcode & 0x000F){
+                case 0x000E:
+                    OPCodeEX9E(opcode);
+                    break;
+                case 0x0001:
+                    OPCodeEXA1(opcode);
+                    break;
+                default: // An error has occurred.
+                    break;
+            }
+            break;
 
-
-        default: return; // No implementation.
+        case 0xF000:
+            switch (opcode & 0x00F0) {
+            case 0x0000:
+                switch (opcode & 0x000F) {
+                    case 0x0007:
+                        OPCodeFX07(opcode);
+                        break;
+                    case 0x000A:
+                        OPCodeFX0A(opcode);
+                        break;
+                default: // An error has occurred.
+                        break;
+                }
+                break;
+            case 0x0010:
+                switch (opcode & 0x000F) {
+                    case 0x0005:
+                        OPCodeFX15(opcode);
+                        break;
+                    case 0x0008:
+                        OPCodeFX18(opcode);
+                        break;
+                    case 0x000E:
+                        OPCodeFX1E(opcode);
+                        break;
+                default: // An error has occurred.
+                        break;
+                }
+            case 0x0020:
+                    OPCodeFX29(opcode);
+                    break;
+            case 0x0030:
+                    OPCodeFX33(opcode);
+                    break;
+            case 0x0050:
+                    OPCodeFX55(opcode);
+                    break;
+            case 0x0060:
+                    OPCodeFX65(opcode);
+                    break;
+            }
+        default: // An error has occurred.
+            break;
     }
 }
 
+
+
 /**
- * CHIP8 instruction 1NNN: Call
- * Sets the program counter to point to the instruction located at address NNN.
- * @param opcode
- */
+* CHIP8 instruction 1NNN: Call
+* Sets the program counter to point to the instruction located at address NNN.
+* @param opcode
+*/
 void CHIP8Context::OPCode1NNN(const WORD& opcode) {
     m_ProgramCounter = opcode & 0x0FFF;
 }
 
+
+/**
+* CHIP8 instruction 00EE
+* @post Returns to a subroutine.
+*/
+void CHIP8Context::OPCode00EE() {
+    if (!m_Stack.empty()) {
+        m_ProgramCounter = m_Stack.top();
+        m_Stack.pop();
+    } else {
+        // Handle stack underflow error
+        m_ProgramCounter = 0x200; // reset to start or handle error appropriately.
+    }
+}
+
+/**
+* CHIP8 instruction 2NNN.
+* @param opcode The OPCode that contains the address containing the instruction.
+* @post Calls subroutine at NNN.
+*/
+void CHIP8Context::OPCode2NNN(const WORD& opcode) {
+    // Push current PC onto the stack
+    m_Stack.push(m_ProgramCounter);
+
+    // Extract NNN (lower 12 bits)
+    const WORD address = opcode & 0x0FFF;
+
+    // Jump to NNN
+    m_ProgramCounter = address;
+}
 /**
  CHIP8 instruction 00E0: Clears the screen.
  */
-void CHIP8Context::OPCode00E0() { // Read the chapter on Graphics before implementing.
-    return;
+void CHIP8Context::OPCode00E0() {
+    std::memset(m_ScreenData, 0, sizeof(m_ScreenData));
 }
 
 /**
@@ -345,7 +448,7 @@ void CHIP8Context::OPCode9XY0(const WORD &opcode) {
     int x = (opcode & 0x0F00);
     x = x >> 8;
     int y = (opcode & 0x00F0);
-    y = y >> 8;
+    y = y >> 4;
 
     if (m_Registers[x] != m_Registers[y]) {
         m_ProgramCounter+=2;

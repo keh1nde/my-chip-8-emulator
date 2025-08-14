@@ -18,7 +18,7 @@ struct CHIP8Context {
     BYTE m_Registers[16]; // 16 registers, 1 byte each
     WORD m_AddressI; // The 16-bit address register I
     WORD m_ProgramCounter; // the 16-bit program counter
-    std::vector<uint16_t> m_Stack; // the 16-bit stack
+    std::stack<uint16_t> m_Stack; // the 16-bit stack
 
     BYTE m_ScreenData[64][32];
 
@@ -28,8 +28,9 @@ struct CHIP8Context {
 
     // OPCodes
 
+
     /**
-    * CHIP8 instruction 1NNN: Call
+    * CHIP8 instruction 1NNN
     * Sets the program counter to point to the instruction located at address NNN.
     * @param opcode The OPCode that contains the address containing the instruction.
     * @post Program Counter is set to that instruction.
@@ -37,14 +38,22 @@ struct CHIP8Context {
     void OPCode1NNN(const WORD& opcode);
 
     /**
-    CHIP8 instruction 00E0: Clears the screen.
+    * CHIP8 instruction 2NNN.
+    * @param opcode The OPCode that contains the address containing the instruction.
+    * @post Calls subroutine at NNN.
+    */
+    void OPCode2NNN(const WORD& opcode);
+    /**
+    * CHIP8 instruction 00E0
+    * @post Clears the screen.
     */
     void OPCode00E0();
 
     /**
-     * CHIP8 instruction 00EE: Returns to a subroutine.
+     * CHIP8 instruction 00EE
+     * @post Returns to a subroutine.
      */
-    void OPCode00EE() const;
+    void OPCode00EE();
 
     /**
      * CHIP8 instruction 3XNN
@@ -188,6 +197,83 @@ struct CHIP8Context {
      * VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn,
      * and to 0 if that does not happen.
      */
+    void OPCodeEX9E(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction EXA1.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Skips the next instruction if the key corresponding to the value of VX is pressed.
+     */
+    void OPCodeEXA1(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX07.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Sets VX to the value of the delay timer.
+     */
+    void OPCodeFX07(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX0A.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post A key press is awaited, and then stored in VX. All instructions are halted until the next key event.
+     */
+    void OPCodeFX0A(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX15.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Sets the delay timer to VX.
+     */
+    void OPCodeFX15(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX18.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Sets the sound timer to VX.
+     */
+    void OPCodeFX18(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX1E.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Sets the delay timer to VX.
+     */
+    void OPCodeFX1E(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX29.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Sets I to the location of the sprite for the character in VX(only consider the lowest nibble).
+     * Characters 0-F (in hexadecimal) are represented by a 4x5 font
+     */
+    void OPCodeFX29(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX33.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Stores the binary-coded decimal representation of VX,
+     * with the hundreds digit in memory at location in I,
+     * the tens digit at location I+1, and the ones digit at location I+2.
+     */
+    void OPCodeFX33(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX55.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Stores from V0 to VX (including VX) in memory, starting at address I.
+     * The offset from I is increased by 1 for each value written, but I itself is left unmodified.
+     */
+    void OPCodeFX55(const WORD& opcode);
+
+    /**
+     * CHIP8 Instruction FX65.
+     * @param opcode An OPCode containing a number X corresponding to the requested register.
+     * @post Fills from V0 to VX (including VX) with values from memory, starting at address I.
+     * The offset from I is increased by 1 for each value read, but I itself is left unmodified.
+     */
+    void OPCodeFX65(const WORD& opcode);
+
 };
 
 
