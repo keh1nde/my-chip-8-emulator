@@ -225,12 +225,6 @@ void CHIP8Context::OPCode00E0() {
     std::memset(m_ScreenData, 0, sizeof(m_ScreenData));
 }
 
-/**
-* CHIP8 instruction 00EE: Returns to a subroutine.
-*/
-void CHIP8Context::OPCode00EE() const {
-    return;
-}
 
 /**
 * CHIP8 instruction 3XNN
