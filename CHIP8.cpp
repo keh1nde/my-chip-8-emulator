@@ -41,6 +41,7 @@ void CHIP8Context::execute() {
             case 0x00EE:
                     OPCode00EE();
                     break;
+            default: // Fatal Error. Incorrect instruction.
             }
 
         case 0x2000:
@@ -80,8 +81,25 @@ void CHIP8Context::execute() {
                 case 0x0003:
                     OPCode8XY3(opcode);
                     break;
-
+                case 0x0004:
+                    OPCode8XY4(opcode);
+                    break;
+                case 0x0005:
+                    OPCode8XY5(opcode);
+                    break;
+                case 0x0006:
+                    OPCode8XY6(opcode);
+                    break;
+                case 0x0007:
+                    OPCode8XY7(opcode);
+                    break;
+                case 0x000E:
+                    OPCode8XYE(opcode);
+                    break;
             }
+        case 0x9000:
+            OPCode9XY0(opcode);
+             break;
 
 
         default: return; // No implementation.
@@ -117,10 +135,10 @@ void CHIP8Context::OPCode00EE() const {
 * @post Check if X and NN are equal, and skips the next instruction if true.
 */
 void CHIP8Context::OPCode3XNN(const WORD& opcode) {
-    const WORD Vx = (opcode & 0x0F00);
+    const WORD x = (opcode & 0x0F00);
     const WORD NN = (opcode & 0x00FF);
 
-    if (Vx == NN) {
+    if (m_Registers[x] == NN) {
         m_ProgramCounter += 2; // Skip the next instruction.
     }
 }
@@ -131,10 +149,10 @@ void CHIP8Context::OPCode3XNN(const WORD& opcode) {
 * @post Check if X and NN are not equal, and skips the next instruction if true.
 */
 void CHIP8Context::OPCode4XNN(const WORD& opcode) {
-    const WORD Vx = (opcode & 0x0F00);
+    const int x = (opcode & 0x0F00);
     const WORD NN = (opcode & 0x00FF);
 
-    if (Vx != NN) {
+    if (m_Registers[x] != NN) {
         m_ProgramCounter += 2; // Skip the next instruction.
     }
 }
@@ -224,3 +242,114 @@ void CHIP8Context::OPCode8XY3(const WORD &opcode) {
 
     m_Registers[x] = x^y;
 }
+
+/**
+* CHIP8 Instruction 8XY4.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post Adds Vy to Vx. Sets VF to 1 if there's an overflow.
+*/
+void CHIP8Context::OPCode8XY4(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    if (m_Registers[y] > std::numeric_limits<int>::max() - m_Registers[y]) {
+        m_Registers[0xF] = 1;
+        return;
+    }
+
+    m_Registers[x] += m_Registers[y];
+}
+
+/**
+* CHIP8 Instruction 8XY5.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post Vy is subtracted from Vx. Sets VF to 0 when there's an underflow, and 1 if not.
+*/
+void CHIP8Context::OPCode8XY5(const WORD &opcode) {
+    const BYTE x = (opcode & 0x0F00);
+    const BYTE y = (opcode & 0x00F0);
+
+    // If Vx > 0, Vx - Vy is smaller. Check to see if Vx is already close to 0.
+    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
+        m_Registers[0xF] = 0;
+        return;
+    }
+    // Likewise, if Vy < 0, Vx - |Vy| is smaller. Check to see if Vx is already close to 0.
+    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() - m_Registers[y]) {
+        m_Registers[0xF] = 0;
+        return;
+    }
+
+    m_Registers[x] -= m_Registers[y];
+    m_Registers[0xF] = 1;
+}
+
+/**
+* CHIP8 Instruction 8XY6.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post Shifts VX to the right by 1. Stores the least significant bit of VX prior to the shift into VF.
+*/
+void CHIP8Context::OPCode8XY6(const WORD &opcode) {
+    int x = (opcode & 0x0F00);
+
+    m_Registers[0xF] = (m_Registers[x] & 1);
+
+    m_Registers[x] = m_Registers[x] >> 8;
+
+}
+
+/**
+* CHIP8 Instruction 8XY7.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post VX is set to Vx - Vy. Sets VF to 0 if an underflow occurs, and 1 if not.
+*/
+void CHIP8Context::OPCode8XY7(const WORD &opcode) {
+    int x = (opcode & 0x0F00);
+    x = x >> 8;
+    int y = (opcode & 0x00F0);
+    y = y >> 4;
+
+    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
+        m_Registers[0xF] = 0;
+        return;
+    }
+    // Likewise, if Vy < 0, Vx - |Vy| is smaller. Check to see if Vx is already close to 0.
+    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() - m_Registers[y]) {
+        m_Registers[0xF] = 0;
+        return;
+    }
+
+    m_Registers[x] = m_Registers[x] - m_Registers[y];
+    m_Registers[0xF] = 1;
+}
+
+/**
+* CHIP8 Instruction 8XYE.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post VX is shifted right 1. Sets VF to the least significant bit pre-shift.
+*/
+void CHIP8Context::OPCode8XYE(const WORD &opcode) {
+    int x = (opcode & 0x0F00);
+    m_Registers[0xF] = (opcode & 1);
+    x = x >> 8;
+
+    m_Registers[x] = m_Registers[x] >> 8;
+}
+
+/**
+* CHIP8 Instruction 9XY0.
+* @param opcode The OPCode that contains the registers X and Y.
+* @post If Vx and Vy are not equal, the next instruction is skipped.
+*/
+void CHIP8Context::OPCode9XY0(const WORD &opcode) {
+    int x = (opcode & 0x0F00);
+    x = x >> 8;
+    int y = (opcode & 0x00F0);
+    y = y >> 8;
+
+    if (m_Registers[x] != m_Registers[y]) {
+        m_ProgramCounter+=2;
+    }
+}
+
+
