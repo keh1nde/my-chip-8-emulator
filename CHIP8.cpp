@@ -8,6 +8,7 @@ void CHIP8Context::CPUReset() {
     m_AddressI = 0 ;
     m_ProgramCounter = 0x200;
     memset(m_Registers,0,sizeof(m_Registers)) ; // set registers to 0
+    memset(m_Keypad, 0, sizeof(m_Keypad));
 
     // load in the game
     FILE *in = fopen("c:/INVADERS", "rb");
@@ -178,6 +179,17 @@ void CHIP8Context::execute() {
 }
 
 
+// Helper functions
+
+bool CHIP8Context::isKeyPressed(const BYTE &key) const {
+    if (key > 0x0F) {
+        return false; // invalid key
+    }
+
+    return m_Keypad[key] != 0;
+}
+// OPCodes
+
 
 /**
 * CHIP8 instruction 1NNN: Call
@@ -232,8 +244,8 @@ void CHIP8Context::OPCode00E0() {
 * @post Check if X and NN are equal, and skips the next instruction if true.
 */
 void CHIP8Context::OPCode3XNN(const WORD& opcode) {
-    const WORD x = (opcode & 0x0F00);
-    const WORD NN = (opcode & 0x00FF);
+    int x = (opcode & 0x0F00) >> 8;
+    int NN = (opcode & 0x00FF);
 
     if (m_Registers[x] == NN) {
         m_ProgramCounter += 2; // Skip the next instruction.
@@ -246,8 +258,8 @@ void CHIP8Context::OPCode3XNN(const WORD& opcode) {
 * @post Check if X and NN are not equal, and skips the next instruction if true.
 */
 void CHIP8Context::OPCode4XNN(const WORD& opcode) {
-    const int x = (opcode & 0x0F00);
-    const WORD NN = (opcode & 0x00FF);
+    const int x = (opcode & 0x0F00) >> 8;
+    const int NN = (opcode & 0x00FF);
 
     if (m_Registers[x] != NN) {
         m_ProgramCounter += 2; // Skip the next instruction.
@@ -260,8 +272,8 @@ void CHIP8Context::OPCode4XNN(const WORD& opcode) {
 * @post Check if X and Y are the same, and skips the next instruction if so.
 */
 void CHIP8Context::OPCode5XY0(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
     if (m_Registers[x] == m_Registers[y]) {
         m_ProgramCounter += 2; // Skip the next instruction.
@@ -274,8 +286,8 @@ void CHIP8Context::OPCode5XY0(const WORD &opcode) {
 * @post Sets X equal to NN.
 */
 void CHIP8Context::OPCode6XNN(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE NN = (opcode & 0x00FF);
+    int x = (opcode & 0x0F00) >> 8;
+    int NN = (opcode & 0x00FF);
 
     m_Registers[x] = NN;
 }
@@ -286,8 +298,8 @@ void CHIP8Context::OPCode6XNN(const WORD &opcode) {
 * @post Adds NN to X.
 */
 void CHIP8Context::OPCode7XNN(const WORD& opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE NN = (opcode & 0x00FF);
+    int x = (opcode & 0x0F00) >> 8;
+    int NN = (opcode & 0x00FF);
 
     m_Registers[x] += NN;
 }
@@ -295,13 +307,13 @@ void CHIP8Context::OPCode7XNN(const WORD& opcode) {
 /**
 * CHIP8 Instruction 8XY0.
 * @param opcode OPCode containing both X and Y.
-* Sets the register X equal to Y.
+* Sets Vx equal to Vy.
 */
 void CHIP8Context::OPCode8XY0(const WORD& opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE NN = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = NN;
+    m_Registers[x] = m_Registers[y];
 }
 
 /**
@@ -310,34 +322,34 @@ void CHIP8Context::OPCode8XY0(const WORD& opcode) {
 * Sets the register X equal to the bitwise OR of X and Y.
 */
 void CHIP8Context::OPCode8XY1(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = x|y;
+    m_Registers[x] = m_Registers[x] | m_Registers[y];
 }
 
 /**
-* CHIP8 Instruction 8XY0
-* @param opcode OPCode containing both X and Y
-* Sets the register X equal to Y.
+* CHIP8 Instruction 8XY2.
+* @param opcode OPCode containing both X and Y.
+* Sets Vx to the value of the bitwise AND of Vx and Vy.
 */
 void CHIP8Context::OPCode8XY2(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = x&y;
+    m_Registers[x] = m_Registers[x] & m_Registers[y];
 }
 
 /**
-* CHIP8 Instruction 8XY3
-* @param opcode OPCode containing both X and Y
+* CHIP8 Instruction 8XY3.
+* @param opcode OPCode containing both X and Y.
 * Sets the register X equal to the XOR of X and Y.
 */
 void CHIP8Context::OPCode8XY3(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = x^y;
+    m_Registers[x] = m_Registers[x] ^ m_Registers[y];
 }
 
 /**
@@ -346,8 +358,8 @@ void CHIP8Context::OPCode8XY3(const WORD &opcode) {
 * @post Adds Vy to Vx. Sets VF to 1 if there's an overflow.
 */
 void CHIP8Context::OPCode8XY4(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
     if (m_Registers[y] > std::numeric_limits<int>::max() - m_Registers[y]) {
         m_Registers[0xF] = 1;
@@ -363,8 +375,8 @@ void CHIP8Context::OPCode8XY4(const WORD &opcode) {
 * @post Vy is subtracted from Vx. Sets VF to 0 when there's an underflow, and 1 if not.
 */
 void CHIP8Context::OPCode8XY5(const WORD &opcode) {
-    const BYTE x = (opcode & 0x0F00);
-    const BYTE y = (opcode & 0x00F0);
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
     // If Vx > 0, Vx - Vy is smaller. Check to see if Vx is already close to 0.
     if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
@@ -439,14 +451,139 @@ void CHIP8Context::OPCode8XYE(const WORD &opcode) {
 * @post If Vx and Vy are not equal, the next instruction is skipped.
 */
 void CHIP8Context::OPCode9XY0(const WORD &opcode) {
-    int x = (opcode & 0x0F00);
-    x = x >> 8;
-    int y = (opcode & 0x00F0);
-    y = y >> 4;
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
     if (m_Registers[x] != m_Registers[y]) {
         m_ProgramCounter+=2;
     }
 }
 
+void CHIP8Context::OPCodeANNN(const WORD &opcode) {
+    int address = (opcode & 0x0FFF);
+    m_AddressI = address;
+}
 
+void CHIP8Context::OPCodeBNNN(const WORD &opcode) {
+    int address = (opcode & 0xFFF);
+    address = address + m_Registers[0x0];
+
+    m_ProgramCounter = address;
+}
+
+void CHIP8Context::OPCodeCXNN(const WORD &opcode) {
+    std::random_device rd;   // Non-deterministic seed
+    std::mt19937 gen(rd());  // Mersenne Twister engine
+    std::uniform_int_distribution<int> dist(0, 255);
+
+    int random_number = dist(gen);
+
+    int x = (opcode & 0x0F00);
+    m_Registers[x] = (m_Registers[x] & random_number);
+
+}
+
+
+void CHIP8Context::OPCodeDXYN(const WORD& opcode ) {
+    int regx = opcode & 0x0F00 ;
+    regx = regx >> 8 ;
+    int regy = opcode & 0x00F0 ;
+    regy = regy >> 4 ;
+
+    int height = opcode & 0x000F;
+    int coordx = m_Registers[regx] ;
+    int coordy = m_Registers[regy] ;
+
+    m_Registers[0xf] = 0 ;
+
+    // loop for the amount of vertical lines needed to draw
+    for (int yline = 0; yline < height; yline++)
+    {
+        BYTE data = m_GameMemory[m_AddressI+yline];
+        int xpixelinv = 7 ;
+        int xpixel = 0 ;
+        for(xpixel = 0;xpixel < 8; xpixel++,xpixelinv--)
+        {
+            int mask = 1 << xpixelinv ;
+            if (data & mask)
+            {
+                int x = coordx + xpixel;
+                int y = coordy + yline ;
+                if ( m_ScreenData[x][y] == 1 )
+                    m_Registers[0xF]=1; //collision
+                m_ScreenData[x][y]^=1 ;
+            }
+        }
+    }
+}
+
+
+
+void CHIP8Context::OPCodeEX9E(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8; // extract X
+    BYTE key = m_Registers[x] & 0x000F; // lowest nibble
+
+    if (isKeyPressed(key)) {
+        m_ProgramCounter += 2; // skip next instruction
+    }
+}
+
+void CHIP8Context::OPCodeEXA1(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+    BYTE key = m_Registers[x] & 0x000F;
+
+    if (!isKeyPressed(key)) {
+        m_ProgramCounter +=2;
+    }
+}
+
+void CHIP8Context::OPCodeFX0A(const WORD &opcode) {
+    // Input implementation needed.
+}
+
+void CHIP8Context::OPCodeFX1E(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+    m_AddressI += m_Registers[x];
+}
+
+void CHIP8Context::OPCodeFX07(const WORD &opcode) {
+    // Timer implementation needed.
+}
+
+void CHIP8Context::OPCodeFX15(const WORD &opcode) {
+    // Timer implementation needed.
+}
+
+void CHIP8Context::OPCodeFX18(const WORD &opcode) {
+    // Help needed.
+}
+
+void CHIP8Context::OPCodeFX29(const WORD &opcode) {
+    // Timer implementation needed.
+}
+
+void CHIP8Context::OPCodeFX33(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+    BYTE value = m_Registers[x];
+
+    // Store BCD representation of Vx in memory
+    m_GameMemory[m_AddressI] = value / 100;        // hundreds
+    m_GameMemory[m_AddressI + 1] = (value / 10) % 10;  // tens
+    m_GameMemory[m_AddressI + 2] = value % 10;         // ones
+}
+
+void CHIP8Context::OPCodeFX55(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+
+    for (int i = 0; i < x; i++) {
+        m_GameMemory[i] = m_AddressI + i;
+    }
+}
+
+void CHIP8Context::OPCodeFX65(const WORD &opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+
+    for (int i = 0; i < x; i++) {
+        m_GameMemory[i] = m_AddressI + i;
+    }
+}

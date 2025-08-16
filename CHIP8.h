@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <random>
 
 struct CHIP8Context {
     typedef unsigned char WORD;
@@ -19,15 +20,18 @@ struct CHIP8Context {
     WORD m_AddressI; // The 16-bit address register I
     WORD m_ProgramCounter; // the 16-bit program counter
     std::stack<uint16_t> m_Stack; // the 16-bit stack
-
+    BYTE m_Keypad[16];
     BYTE m_ScreenData[64][32];
 
     void CPUReset();
     void execute();
     WORD GetNextOpcode();
 
-    // OPCodes
 
+    // Helper functions
+    bool isKeyPressed(const BYTE& key) const;
+
+    // OPCodes
 
     /**
     * CHIP8 instruction 1NNN
