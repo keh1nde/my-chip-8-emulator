@@ -402,7 +402,6 @@ void CHIP8Context::OPCode8XY6(const WORD &opcode) {
     int x = (opcode & 0x0F00);
 
     m_Registers[0xF] = (m_Registers[x] & 1);
-
     m_Registers[x] = m_Registers[x] >> 8;
 
 }
