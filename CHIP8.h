@@ -10,6 +10,9 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <chrono>
+
+#include "SDL2/SDL.h"
 
 struct CHIP8Context {
     typedef unsigned char WORD;
@@ -22,6 +25,8 @@ struct CHIP8Context {
     std::stack<uint16_t> m_Stack; // the 16-bit stack
     BYTE m_Keypad[16];
     BYTE m_ScreenData[64][32];
+    BYTE m_DelayTimer;
+    BYTE m_SoundTimer;
 
     void CPUReset();
     void execute();
@@ -30,6 +35,7 @@ struct CHIP8Context {
 
     // Helper functions
     bool isKeyPressed(const BYTE& key) const;
+    void render(SDL_Renderer* renderer);
 
     // OPCodes
 

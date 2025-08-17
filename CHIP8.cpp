@@ -7,11 +7,17 @@
 void CHIP8Context::CPUReset() {
     m_AddressI = 0 ;
     m_ProgramCounter = 0x200;
-    memset(m_Registers,0,sizeof(m_Registers)) ; // set registers to 0
+
+    m_DelayTimer = 0;
+    m_SoundTimer = 0;
+
+    // set all registers to 0
+    memset(m_Registers,0,sizeof(m_Registers));
     memset(m_Keypad, 0, sizeof(m_Keypad));
+    memset(m_ScreenData, 0, sizeof(m_ScreenData));
 
     // load in the game
-    FILE *in = fopen("c:/INVADERS", "rb");
+    FILE *in = fopen("c:/Pong.ch8", "rb");
     fread( &m_GameMemory[0x200], 0xfff, 1, in);
     fclose(in);
 }
@@ -187,6 +193,24 @@ bool CHIP8Context::isKeyPressed(const BYTE &key) const {
     }
 
     return m_Keypad[key] != 0;
+}
+
+void CHIP8Context::render(SDL_Renderer* renderer) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Black
+    SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White
+    int scale = 10; // 64*10=640, 32*10=320
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            if (m_ScreenData[x][y]) {
+                SDL_Rect rect = { x * scale, y * scale, scale, scale };
+                SDL_RenderFillRect(renderer, &rect);
+            }
+        }
+    }
+
+    SDL_RenderPresent(renderer);
 }
 // OPCodes
 
@@ -546,15 +570,18 @@ void CHIP8Context::OPCodeFX1E(const WORD &opcode) {
 }
 
 void CHIP8Context::OPCodeFX07(const WORD &opcode) {
-    // Timer implementation needed.
+    int x = (opcode & 0x0F00) >> 8;
+    m_Registers[x] = m_DelayTimer;
 }
 
 void CHIP8Context::OPCodeFX15(const WORD &opcode) {
-    // Timer implementation needed.
+    int x = (opcode & 0x0F00) >> 8;
+    m_DelayTimer = m_Registers[x];
 }
 
 void CHIP8Context::OPCodeFX18(const WORD &opcode) {
-    // Help needed.
+    int x = (opcode & 0x0F00) >> 8;
+    m_SoundTimer = m_Registers[x];
 }
 
 void CHIP8Context::OPCodeFX29(const WORD &opcode) {
@@ -583,6 +610,6 @@ void CHIP8Context::OPCodeFX65(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
 
     for (int i = 0; i < x; i++) {
-        m_GameMemory[i] = m_AddressI + i;
+        m_Registers[i] = m_GameMemory[m_AddressI + i];
     }
 }
