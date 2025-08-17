@@ -16,10 +16,26 @@ void CHIP8Context::CPUReset() {
     memset(m_Keypad, 0, sizeof(m_Keypad));
     memset(m_ScreenData, 0, sizeof(m_ScreenData));
 
-    // load in the game
-    FILE *in = fopen("c:/Pong.ch8", "rb");
-    fread( &m_GameMemory[0x200], 0xfff, 1, in);
-    fclose(in);
+    // Load ROM safely (relative path recommended)
+    const size_t loadOffset = 0x200;                    // Programs start at 0x200
+    const size_t memSize    = 0x1000;                   // 4 KB total
+    const size_t capacity   = memSize - loadOffset;     // bytes available for ROM
+
+    // Zero out RAM before loading
+    std::memset(m_GameMemory, 0, memSize);
+
+    FILE* in = std::fopen("/Users/kehindeslaptop/Code/projects/my-chip-8-emulator/Pong.ch8", "rb"); // use relative path;
+    if (!in) {
+        // Could not open ROM; avoid crashing on fread(nullptr)
+        // You may want to surface an error to the user/log here
+        perror("Failed to open ROM");
+        return;
+    }
+
+    // Read up to capacity bytes starting at 0x200
+    const size_t bytesRead = std::fread(&m_GameMemory[loadOffset], 1, capacity, in);
+    (void)bytesRead; // optionally log bytesRead
+    std::fclose(in);
 }
 
 CHIP8Context::WORD CHIP8Context::GetNextOpcode()
@@ -213,7 +229,7 @@ void CHIP8Context::render(SDL_Renderer* renderer) {
     SDL_RenderPresent(renderer);
 }
 
-void processInput(CHIP8Context& chip8, bool& running) {
+void CHIP8Context::processInput(CHIP8Context& chip8, bool& running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
@@ -458,7 +474,7 @@ void CHIP8Context::OPCode8XY5(const WORD &opcode) {
 * @post Shifts VX to the right by 1. Stores the least significant bit of VX prior to the shift into VF.
 */
 void CHIP8Context::OPCode8XY6(const WORD &opcode) {
-    int x = (opcode & 0x0F00);
+    int x = (opcode & 0x0F00) >> 8;
 
     m_Registers[0xF] = (m_Registers[x] & 1);
     m_Registers[x] = m_Registers[x] >> 8;
@@ -471,10 +487,8 @@ void CHIP8Context::OPCode8XY6(const WORD &opcode) {
 * @post VX is set to Vx - Vy. Sets VF to 0 if an underflow occurs, and 1 if not.
 */
 void CHIP8Context::OPCode8XY7(const WORD &opcode) {
-    int x = (opcode & 0x0F00);
-    x = x >> 8;
-    int y = (opcode & 0x00F0);
-    y = y >> 4;
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
 
     if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
         m_Registers[0xF] = 0;
@@ -536,7 +550,7 @@ void CHIP8Context::OPCodeCXNN(const WORD &opcode) {
 
     int random_number = dist(gen);
 
-    int x = (opcode & 0x0F00);
+    int x = (opcode & 0x0F00) >> 8;
     m_Registers[x] = (m_Registers[x] & random_number);
 
 }
@@ -634,7 +648,15 @@ void CHIP8Context::OPCodeFX18(const WORD &opcode) {
 }
 
 void CHIP8Context::OPCodeFX29(const WORD &opcode) {
-    // Timer implementation needed.
+    // FX29: Set I = location of sprite for digit Vx.
+    int x = (opcode & 0x0F00) >> 8;
+    BYTE digit = m_Registers[x] & 0x0F; // 0..F
+
+    // Standard CHIP-8 fontset base (each glyph 5 bytes)
+    const WORD FONT_BASE = 0x050;
+    const WORD GLYPH_SIZE = 5;
+
+    m_AddressI = static_cast<WORD>(FONT_BASE + static_cast<WORD>(digit) * GLYPH_SIZE);
 }
 
 void CHIP8Context::OPCodeFX33(const WORD &opcode) {
