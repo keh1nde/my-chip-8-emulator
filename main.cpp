@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
 
         // Run one CPU cycle
         for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+            chip8.processInput(chip8, running);
             chip8.execute();
 
             if (chip8.m_DelayTimer > 0) {

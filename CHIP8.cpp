@@ -212,8 +212,43 @@ void CHIP8Context::render(SDL_Renderer* renderer) {
 
     SDL_RenderPresent(renderer);
 }
-// OPCodes
 
+void processInput(CHIP8Context& chip8, bool& running) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            running = false;
+        }
+        else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            bool pressed = (event.type == SDL_KEYDOWN);
+
+            switch (event.key.keysym.sym) {
+                case SDLK_1: chip8.m_Keypad[0x1] = pressed; break;
+                case SDLK_2: chip8.m_Keypad[0x2] = pressed; break;
+                case SDLK_3: chip8.m_Keypad[0x3] = pressed; break;
+                case SDLK_4: chip8.m_Keypad[0xC] = pressed; break;
+
+                case SDLK_q: chip8.m_Keypad[0x4] = pressed; break;
+                case SDLK_w: chip8.m_Keypad[0x5] = pressed; break;
+                case SDLK_e: chip8.m_Keypad[0x6] = pressed; break;
+                case SDLK_r: chip8.m_Keypad[0xD] = pressed; break;
+
+                case SDLK_a: chip8.m_Keypad[0x7] = pressed; break;
+                case SDLK_s: chip8.m_Keypad[0x8] = pressed; break;
+                case SDLK_d: chip8.m_Keypad[0x9] = pressed; break;
+                case SDLK_f: chip8.m_Keypad[0xE] = pressed; break;
+
+                case SDLK_z: chip8.m_Keypad[0xA] = pressed; break;
+                case SDLK_x: chip8.m_Keypad[0x0] = pressed; break;
+                case SDLK_c: chip8.m_Keypad[0xB] = pressed; break;
+                case SDLK_v: chip8.m_Keypad[0xF] = pressed; break;
+            }
+        }
+    }
+}
+
+
+// OPCodes
 
 /**
 * CHIP8 instruction 1NNN: Call
@@ -561,7 +596,21 @@ void CHIP8Context::OPCodeEXA1(const WORD &opcode) {
 }
 
 void CHIP8Context::OPCodeFX0A(const WORD &opcode) {
-    // Input implementation needed.
+    int x = (opcode & 0x0F00) >> 8;
+
+    bool keyPressed = false;
+    for (int i = 0; i < 16; ++i) {
+        if (m_Keypad[i]) {
+            m_Registers[x] = i;
+            keyPressed = true;
+            break;
+        }
+    }
+
+    // If no key is pressed, decrement PC to re-execute this instruction
+    if (!keyPressed) {
+        m_ProgramCounter -= 2;
+    }
 }
 
 void CHIP8Context::OPCodeFX1E(const WORD &opcode) {
