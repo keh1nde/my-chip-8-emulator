@@ -39,7 +39,7 @@ struct CHIP8Context {
     // Helper functions
     bool isKeyPressed(const BYTE& key) const;
     void render(SDL_Renderer* renderer);
-    void processInput(CHIP8Context& chip8, bool& running);
+    void processInput(CHIP8Context& chip8, SDL_Event& e, bool& running);
 
     // OPCodes
 
