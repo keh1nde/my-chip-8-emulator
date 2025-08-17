@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Create renderer
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     CHIP8Context chip8;
     chip8.CPUReset();
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     bool running = true;
     SDL_Event e;
 
-    const int INSTRUCTIONS_PER_SECOND = 700; // Can be adjusted to be between 500-1000
+    const int INSTRUCTIONS_PER_SECOND = 900; // Can be adjusted to be between 500-1000
     const int INSTRUCTIONS_PER_FRAME = INSTRUCTIONS_PER_SECOND / 60;
 
     auto lastTime = std::chrono::high_resolution_clock::now();
