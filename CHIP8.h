@@ -15,8 +15,11 @@
 #include "SDL2/SDL.h"
 
 struct CHIP8Context {
-    typedef unsigned char WORD;
-    typedef unsigned char BYTE;
+    // typedef unsigned char WORD;
+    // typedef unsigned char BYTE;
+
+    using BYTE = u_int8_t;
+    using WORD = u_int16_t;
 
     BYTE m_GameMemory[0xFFF]; // 0xFFF bytes of memory
     BYTE m_Registers[16]; // 16 registers, 1 byte each
