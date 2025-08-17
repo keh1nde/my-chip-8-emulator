@@ -45,35 +45,29 @@ int main(int argc, char* argv[]) {
 
         if (elapsedMs >= (1000.0 / 60.0)) { // 60Hz tick
             lastTime = currentTime;
-            chip8.render(renderer);
-        }
-        // Handle input events
-        while (SDL_PollEvent(&e) != 0) {
-            if (e.type == SDL_QUIT) {
-                running = false;
-            }
-        }
 
-        // Run one CPU cycle
-        for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
-            chip8.processInput(chip8, running);
-            chip8.execute();
+            // Handle input events once per frame
+            chip8.processInput(chip8, e, running);
 
-            if (chip8.m_DelayTimer > 0) {
-                chip8.m_DelayTimer--;
-            }
+            // Run one CPU cycle
+            for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+                chip8.execute();
 
-            if (chip8.m_SoundTimer > 0) {
-                chip8.m_SoundTimer--;
-                if (chip8.m_SoundTimer == 0) {
-                    // TODO: Stop Sound.
+                if (chip8.m_DelayTimer > 0) {
+                    chip8.m_DelayTimer--;
+                }
+
+                if (chip8.m_SoundTimer > 0) {
+                    chip8.m_SoundTimer--;
+                    if (chip8.m_SoundTimer == 0) {
+                        // TODO: Stop Sound.
+                    }
                 }
             }
-
-
+            chip8.render(renderer);
+            // SDL_Delay(16); (Delay to simulate ~60Hz)
+            SDL_Delay(1);
         }
-        // Delay to simulate ~60Hz
-        SDL_Delay(16);
     }
 
     SDL_DestroyRenderer(renderer);
