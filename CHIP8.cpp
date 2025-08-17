@@ -24,10 +24,8 @@ void CHIP8Context::CPUReset() {
     // Zero out RAM before loading
     std::memset(m_GameMemory, 0, memSize);
 
-    FILE* in = std::fopen("/Users/kehindeslaptop/Code/projects/my-chip-8-emulator/Pong.ch8", "rb"); // use relative path;
+    FILE* in = std::fopen("insert/your/absolute/filepath/here", "rb"); // use relative path;
     if (!in) {
-        // Could not open ROM; avoid crashing on fread(nullptr)
-        // You may want to surface an error to the user/log here
         perror("Failed to open ROM");
         return;
     }
