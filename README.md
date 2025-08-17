@@ -29,14 +29,14 @@ This project deepened my understanding of:
 How to Build
 1.	Make sure you have a C++17 (or later) compiler installed.
 2.	Install SDL2 on your system.
-•	On macOS with Homebrew:
+  - On macOS with Homebrew:
 
-`brew install sdl2`
+      `brew install sdl2`
 
 
 - On Linux (Ubuntu/Debian):
 
-`sudo apt-get install libsdl2-dev`
+    `sudo apt-get install libsdl2-dev`
 
 
 - On Windows, download the development libraries and configure them with your compiler/IDE.
