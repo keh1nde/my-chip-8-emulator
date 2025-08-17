@@ -229,38 +229,38 @@ void CHIP8Context::render(SDL_Renderer* renderer) {
     SDL_RenderPresent(renderer);
 }
 
-void CHIP8Context::processInput(CHIP8Context& chip8, bool& running) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            running = false;
-        }
-        else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-            bool pressed = (event.type == SDL_KEYDOWN);
+void CHIP8Context::processInput(CHIP8Context& chip8, SDL_Event& e, bool& running) {
+    // Update internal keyboard state snapshot
+    SDL_PumpEvents();
 
-            switch (event.key.keysym.sym) {
-                case SDLK_1: chip8.m_Keypad[0x1] = pressed; break;
-                case SDLK_2: chip8.m_Keypad[0x2] = pressed; break;
-                case SDLK_3: chip8.m_Keypad[0x3] = pressed; break;
-                case SDLK_4: chip8.m_Keypad[0xC] = pressed; break;
-
-                case SDLK_q: chip8.m_Keypad[0x4] = pressed; break;
-                case SDLK_w: chip8.m_Keypad[0x5] = pressed; break;
-                case SDLK_e: chip8.m_Keypad[0x6] = pressed; break;
-                case SDLK_r: chip8.m_Keypad[0xD] = pressed; break;
-
-                case SDLK_a: chip8.m_Keypad[0x7] = pressed; break;
-                case SDLK_s: chip8.m_Keypad[0x8] = pressed; break;
-                case SDLK_d: chip8.m_Keypad[0x9] = pressed; break;
-                case SDLK_f: chip8.m_Keypad[0xE] = pressed; break;
-
-                case SDLK_z: chip8.m_Keypad[0xA] = pressed; break;
-                case SDLK_x: chip8.m_Keypad[0x0] = pressed; break;
-                case SDLK_c: chip8.m_Keypad[0xB] = pressed; break;
-                case SDLK_v: chip8.m_Keypad[0xF] = pressed; break;
-            }
-        }
+    // Handle window close without draining keyboard events
+    if (SDL_QuitRequested()) {
+        running = false;
+        return;
     }
+
+    // Map current keyboard state to CHIP-8 keypad (0..F)
+    const Uint8* s = SDL_GetKeyboardState(nullptr);
+
+    chip8.m_Keypad[0x1] = s[SDL_SCANCODE_1];
+    chip8.m_Keypad[0x2] = s[SDL_SCANCODE_2];
+    chip8.m_Keypad[0x3] = s[SDL_SCANCODE_3];
+    chip8.m_Keypad[0xC] = s[SDL_SCANCODE_4];
+
+    chip8.m_Keypad[0x4] = s[SDL_SCANCODE_Q];
+    chip8.m_Keypad[0x5] = s[SDL_SCANCODE_W];
+    chip8.m_Keypad[0x6] = s[SDL_SCANCODE_E];
+    chip8.m_Keypad[0xD] = s[SDL_SCANCODE_R];
+
+    chip8.m_Keypad[0x7] = s[SDL_SCANCODE_A];
+    chip8.m_Keypad[0x8] = s[SDL_SCANCODE_S];
+    chip8.m_Keypad[0x9] = s[SDL_SCANCODE_D];
+    chip8.m_Keypad[0xE] = s[SDL_SCANCODE_F];
+
+    chip8.m_Keypad[0xA] = s[SDL_SCANCODE_Z];
+    chip8.m_Keypad[0x0] = s[SDL_SCANCODE_X];
+    chip8.m_Keypad[0xB] = s[SDL_SCANCODE_C];
+    chip8.m_Keypad[0xF] = s[SDL_SCANCODE_V];
 }
 
 
@@ -477,7 +477,7 @@ void CHIP8Context::OPCode8XY6(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
 
     m_Registers[0xF] = (m_Registers[x] & 1);
-    m_Registers[x] = m_Registers[x] >> 8;
+    m_Registers[x] >>= 1;
 
 }
 
@@ -514,7 +514,7 @@ void CHIP8Context::OPCode8XYE(const WORD &opcode) {
     m_Registers[0xF] = (opcode & 1);
     x = x >> 8;
 
-    m_Registers[x] = m_Registers[x] >> 8;
+    m_Registers[x] <<= 1;
 }
 
 /**
@@ -537,10 +537,7 @@ void CHIP8Context::OPCodeANNN(const WORD &opcode) {
 }
 
 void CHIP8Context::OPCodeBNNN(const WORD &opcode) {
-    int address = (opcode & 0xFFF);
-    address = address + m_Registers[0x0];
-
-    m_ProgramCounter = address;
+    m_ProgramCounter = (opcode & 0x0FFF) + m_Registers[0x0];
 }
 
 void CHIP8Context::OPCodeCXNN(const WORD &opcode) {
@@ -548,42 +545,37 @@ void CHIP8Context::OPCodeCXNN(const WORD &opcode) {
     std::mt19937 gen(rd());  // Mersenne Twister engine
     std::uniform_int_distribution<int> dist(0, 255);
 
-    int random_number = dist(gen);
-
     int x = (opcode & 0x0F00) >> 8;
-    m_Registers[x] = (m_Registers[x] & random_number);
+    int NN = (opcode & 0x000F);
+    m_Registers[x] = static_cast<BYTE>(dist(gen)) & NN;
 
 }
 
 
-void CHIP8Context::OPCodeDXYN(const WORD& opcode ) {
-    int regx = opcode & 0x0F00 ;
-    regx = regx >> 8 ;
-    int regy = opcode & 0x00F0 ;
-    regy = regy >> 4 ;
+void CHIP8Context::OPCodeDXYN(const WORD& opcode) {
+    int x = (opcode & 0x0F00) >> 8;
+    int y = (opcode & 0x00F0) >> 4;
+    int height = opcode & 0x000F;   // N rows
 
-    int height = opcode & 0x000F;
-    int coordx = m_Registers[regx] ;
-    int coordy = m_Registers[regy] ;
+    BYTE Vx = m_Registers[x];
+    BYTE Vy = m_Registers[y];
 
-    m_Registers[0xf] = 0 ;
+    m_Registers[0xF] = 0; // reset collision flag
 
-    // loop for the amount of vertical lines needed to draw
-    for (int yline = 0; yline < height; yline++)
-    {
-        BYTE data = m_GameMemory[m_AddressI+yline];
-        int xpixelinv = 7 ;
-        int xpixel = 0 ;
-        for(xpixel = 0;xpixel < 8; xpixel++,xpixelinv--)
-        {
-            int mask = 1 << xpixelinv ;
-            if (data & mask)
-            {
-                int x = coordx + xpixel;
-                int y = coordy + yline ;
-                if ( m_ScreenData[x][y] == 1 )
-                    m_Registers[0xF]=1; //collision
-                m_ScreenData[x][y]^=1 ;
+    for (int row = 0; row < height; ++row) {
+        BYTE spriteByte = m_GameMemory[m_AddressI + row];
+
+        // Each sprite row is 8 pixels wide, MSB on the left
+        for (int bit = 0; bit < 8; ++bit) {
+            if (spriteByte & (0x80 >> bit)) { // pixel should be drawn
+                int px = (Vx + bit) & 63;  // wrap 0..63
+                int py = (Vy + row) & 31;  // wrap 0..31
+
+                BYTE &screenPixel = m_ScreenData[px][py];
+                if (screenPixel == 1) {
+                    m_Registers[0xF] = 1; // collision
+                }
+                screenPixel ^= 1; // XOR draw
             }
         }
     }
@@ -672,15 +664,15 @@ void CHIP8Context::OPCodeFX33(const WORD &opcode) {
 void CHIP8Context::OPCodeFX55(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
 
-    for (int i = 0; i < x; i++) {
-        m_GameMemory[i] = m_AddressI + i;
+    for (int i = 0; i <= x; i++) {
+        m_GameMemory[m_AddressI + i] = m_Registers[i];
     }
 }
 
 void CHIP8Context::OPCodeFX65(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
 
-    for (int i = 0; i < x; i++) {
+    for (int i = 0; i <= x; i++) {
         m_Registers[i] = m_GameMemory[m_AddressI + i];
     }
 }
