@@ -182,6 +182,7 @@ void CHIP8Context::execute() {
                 default: // An error has occurred.
                         break;
                 }
+                break; // <— prevent fallthrough to 0x0020
             case 0x0020:
                     OPCodeFX29(opcode);
                     break;
@@ -195,8 +196,7 @@ void CHIP8Context::execute() {
                     OPCodeFX65(opcode);
                     break;
             }
-        default: // An error has occurred.
-            break;
+            break; // end of case 0xF000
     }
 }
 
@@ -400,7 +400,7 @@ void CHIP8Context::OPCode8XY1(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
     int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = m_Registers[x] | m_Registers[y];
+    m_Registers[x] = (m_Registers[x] | m_Registers[y]);
 }
 
 /**
@@ -412,7 +412,7 @@ void CHIP8Context::OPCode8XY2(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
     int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = m_Registers[x] & m_Registers[y];
+    m_Registers[x] = (m_Registers[x] & m_Registers[y]);
 }
 
 /**
@@ -424,7 +424,7 @@ void CHIP8Context::OPCode8XY3(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
     int y = (opcode & 0x00F0) >> 4;
 
-    m_Registers[x] = m_Registers[x] ^ m_Registers[y];
+    m_Registers[x] = (m_Registers[x] ^ m_Registers[y]);
 }
 
 /**
@@ -436,12 +436,9 @@ void CHIP8Context::OPCode8XY4(const WORD &opcode) {
     int x = (opcode & 0x0F00) >> 8;
     int y = (opcode & 0x00F0) >> 4;
 
-    if (m_Registers[y] > std::numeric_limits<int>::max() - m_Registers[y]) {
-        m_Registers[0xF] = 1;
-        return;
-    }
-
-    m_Registers[x] += m_Registers[y];
+    unsigned sum = static_cast<unsigned>(m_Registers[x]) + static_cast<unsigned>(m_Registers[y]);
+    m_Registers[0xF] = (sum > 0xFF) ? 1 : 0;   // carry flag
+    m_Registers[x]   = static_cast<BYTE>(sum & 0xFF);     // low 8 bits
 }
 
 /**
@@ -450,22 +447,9 @@ void CHIP8Context::OPCode8XY4(const WORD &opcode) {
 * @post Vy is subtracted from Vx. Sets VF to 0 when there's an underflow, and 1 if not.
 */
 void CHIP8Context::OPCode8XY5(const WORD &opcode) {
-    int x = (opcode & 0x0F00) >> 8;
-    int y = (opcode & 0x00F0) >> 4;
-
-    // If Vx > 0, Vx - Vy is smaller. Check to see if Vx is already close to 0.
-    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
-        m_Registers[0xF] = 0;
-        return;
-    }
-    // Likewise, if Vy < 0, Vx - |Vy| is smaller. Check to see if Vx is already close to 0.
-    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() - m_Registers[y]) {
-        m_Registers[0xF] = 0;
-        return;
-    }
-
-    m_Registers[x] -= m_Registers[y];
-    m_Registers[0xF] = 1;
+    int x = (opcode & 0x0F00) >> 8, y = (opcode & 0x00F0) >> 4;
+    m_Registers[0xF] = (m_Registers[x] >= m_Registers[y]) ? 1 : 0;
+    m_Registers[x] = static_cast<BYTE>(m_Registers[x] - m_Registers[y]);
 }
 
 /**
@@ -487,21 +471,9 @@ void CHIP8Context::OPCode8XY6(const WORD &opcode) {
 * @post VX is set to Vx - Vy. Sets VF to 0 if an underflow occurs, and 1 if not.
 */
 void CHIP8Context::OPCode8XY7(const WORD &opcode) {
-    int x = (opcode & 0x0F00) >> 8;
-    int y = (opcode & 0x00F0) >> 4;
-
-    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() + m_Registers[y]) {
-        m_Registers[0xF] = 0;
-        return;
-    }
-    // Likewise, if Vy < 0, Vx - |Vy| is smaller. Check to see if Vx is already close to 0.
-    if (m_Registers[y] < 0 && m_Registers[x] < std::numeric_limits<int>::min() - m_Registers[y]) {
-        m_Registers[0xF] = 0;
-        return;
-    }
-
-    m_Registers[x] = m_Registers[x] - m_Registers[y];
-    m_Registers[0xF] = 1;
+    int x = (opcode & 0x0F00) >> 8, y = (opcode & 0x00F0) >> 4;
+    m_Registers[0xF] = (m_Registers[y] >= m_Registers[x]) ? 1 : 0;
+    m_Registers[x] = static_cast<BYTE>(m_Registers[y] - m_Registers[x]);
 }
 
 /**
@@ -510,10 +482,8 @@ void CHIP8Context::OPCode8XY7(const WORD &opcode) {
 * @post VX is shifted right 1. Sets VF to the least significant bit pre-shift.
 */
 void CHIP8Context::OPCode8XYE(const WORD &opcode) {
-    int x = (opcode & 0x0F00);
-    m_Registers[0xF] = (opcode & 1);
-    x = x >> 8;
-
+    int x = (opcode & 0x0F00) >> 8;
+    m_Registers[0xF] = (m_Registers[x] >> 7) & 1;
     m_Registers[x] <<= 1;
 }
 
@@ -546,8 +516,8 @@ void CHIP8Context::OPCodeCXNN(const WORD &opcode) {
     std::uniform_int_distribution<int> dist(0, 255);
 
     int x = (opcode & 0x0F00) >> 8;
-    int NN = (opcode & 0x000F);
-    m_Registers[x] = static_cast<BYTE>(dist(gen)) & NN;
+    int NN = opcode & 0x00FF;
+    m_Registers[x] = static_cast<BYTE>(dist(gen) & NN);
 
 }
 
