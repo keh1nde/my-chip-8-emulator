@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
 
         if (elapsedMs >= (1000.0 / 60.0)) { // 60Hz tick
             lastTime = currentTime;
+            chip8.render(renderer);
         }
         // Handle input events
         while (SDL_PollEvent(&e) != 0) {
@@ -69,11 +70,10 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            chip8.render(renderer);
-        }
 
+        }
         // Delay to simulate ~60Hz
-        // SDL_Delay(16);
+        SDL_Delay(16);
     }
 
     SDL_DestroyRenderer(renderer);
